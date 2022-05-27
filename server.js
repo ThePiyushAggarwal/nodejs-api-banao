@@ -16,7 +16,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use('/api/users/', require('./routes/userRoutes'))
 
 app.get('/', (request, response) => {
-  response.send('Hello Moto')
+  response.send('Welcome to Node API App')
 })
 
 // Custom error Handler
