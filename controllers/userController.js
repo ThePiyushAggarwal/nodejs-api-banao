@@ -3,6 +3,7 @@ const asyncHandler = require('express-async-handler')
 const User = require('../models/userModel')
 const generateToken = require('../utilities/jwt')
 const bcryptjs = require('bcryptjs')
+const sendConfirmationCode = require('../mailer/mailer')
 
 // Register User
 // POST /api/users
@@ -87,9 +88,111 @@ const loginUser = asyncHandler(async (request, response) => {
 const getUser = asyncHandler(async (request, response) => {
   const user = request.user
   response.json({
+    success: 'User details fetched',
     name: user.name,
     username: user.username,
   })
 })
 
-module.exports = { registerUser, loginUser, getUser }
+// Forgot Password, sends a verification code to email
+// POST /api/users/forgot-password
+// Public
+const forgotPassword = asyncHandler(async (request, response) => {
+  const { email } = request.body
+
+  // Checking if email is entered
+  if (!email) {
+    response.status(400)
+    throw new Error('Please enter the email!')
+  }
+
+  const user = await User.findOne({ email })
+
+  // If the user email is not found, throw error
+  if (!user) {
+    response.status(400)
+    throw new Error('Please check the entered email. It seems to be incorrect.')
+  }
+
+  // Sending the generated code to the database
+  const updatedUser = await User.findByIdAndUpdate(
+    user._id,
+    { forgotPasswordConfirmationCode: Math.floor(Math.random() * 9000 + 1000) },
+    { new: true, runValidators: true }
+  )
+
+  // This sends the email with the code to user email
+  sendConfirmationCode(updatedUser)
+
+  response.json({
+    success:
+      'A code has been sent to your email. Please enter code, email and new password in the follow up request API.',
+  })
+})
+
+// Set new password, takes in the code from email
+// POST /api/users/set-new-password
+// Public
+const setNewPassword = asyncHandler(async (request, response) => {
+  const { email, newPassword, code } = request.body
+
+  // Checking if all the fields are entered
+  if (!email || !newPassword || !code) {
+    response.status(400)
+    throw new Error('Please enter all fields!')
+  }
+
+  const user = await User.findOne({ email })
+
+  // If the user email is not found, throw error
+  if (!user) {
+    response.status(400)
+    throw new Error('Please check the entered email. It seems to be incorrect.')
+  }
+
+  // If the entered code is wrong
+  if (user.forgotPasswordConfirmationCode !== parseInt(code)) {
+    await User.findByIdAndUpdate(
+      user._id,
+      {
+        forgotPasswordConfirmationCode: Math.floor(Math.random() * 9000 + 1000),
+      },
+      { new: true, runValidators: true }
+    )
+    response.status(401)
+    throw new Error(
+      'Confirmation code entered is incorrect. Please request for another code.'
+    )
+  }
+
+  // Hashing the new password
+  const salt = await bcryptjs.genSalt()
+  const newHashedPassword = await bcryptjs.hash(newPassword, salt)
+
+  // If the code is correct, update password and reset code
+  const updatedUser = await User.findByIdAndUpdate(
+    user._id,
+    {
+      password: newHashedPassword,
+      forgotPasswordConfirmationCode: Math.floor(Math.random() * 9000 + 1000),
+    },
+    { new: true, runValidators: true }
+  )
+
+  if (!updatedUser) {
+    response.status(500)
+    throw new Error('Internal Server Error')
+  }
+
+  response.json({
+    success: 'Password updated successfully!',
+  })
+})
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getUser,
+  forgotPassword,
+  setNewPassword,
+}

@@ -16,7 +16,7 @@ const userSchema = mongoose.Schema({
     type: String,
     trim: true,
     minLength: 6,
-    maxLength: 30,
+    maxLength: 40,
     required: [true, 'Please add your email'],
     match: [
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
@@ -34,6 +34,11 @@ const userSchema = mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Please add your password'],
+  },
+  forgotPasswordConfirmationCode: {
+    type: Number,
+    minLength: 4,
+    maxLength: 4,
   },
 })
 
