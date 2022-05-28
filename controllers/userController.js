@@ -38,7 +38,7 @@ const registerUser = asyncHandler(async (request, response) => {
     password: passwordHashed,
   })
 
-  response.send({
+  response.status(201).send({
     success: 'User registered',
     username: user.username,
     token: generateToken(user._id),

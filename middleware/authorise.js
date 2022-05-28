@@ -21,7 +21,14 @@ const protect = asyncHandler(async (request, response, next) => {
       }
     )
 
-    request.user = await User.findById(id)
+    const user = await User.findById(id)
+
+    if (!user) {
+      response.status(401)
+      throw new Error('User not authorised')
+    }
+
+    request.user = user
 
     next()
   } else {
