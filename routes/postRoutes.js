@@ -1,5 +1,12 @@
 const express = require('express')
+const app = express()
 const router = express.Router()
+const {
+  addComment,
+  deleteComment,
+  updateComment,
+} = require('../controllers/comment.controller')
+const { toggleLike } = require('../controllers/like.controller')
 const {
   createPost,
   getAllPosts,
@@ -28,5 +35,17 @@ router.get('/me/:id', protect, getMyPost)
 router.put('/me/:id', protect, updateMyPost)
 // Delete my post
 router.delete('/me/:id', protect, deleteMyPost)
+
+// Like routes
+// Add a like
+router.post('/like', protect, toggleLike)
+
+// Comment routes
+// Add a comment
+router.post('/comment', protect, addComment)
+// Delete a comment
+router.delete('/comment', protect, deleteComment)
+// Update a comment
+router.put('/comment', protect, updateComment)
 
 module.exports = router

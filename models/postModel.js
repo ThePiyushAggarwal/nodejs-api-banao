@@ -24,6 +24,14 @@ const postSchema = new mongoose.Schema(
       maxLength: 1000,
       required: [true, 'Please add description to your post'],
     },
+    likes: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Like',
+    },
+    comments: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Comment',
+    },
   },
   { timestamps: true }
 )

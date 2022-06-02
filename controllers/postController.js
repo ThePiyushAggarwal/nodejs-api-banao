@@ -1,5 +1,7 @@
 const asyncHandler = require('express-async-handler')
 const Post = require('../models/postModel')
+const Like = require('../models/like.model')
+const Comment = require('../models/comment.model')
 
 // Create Post
 // POST /api/posts/new
@@ -28,11 +30,20 @@ const createPost = asyncHandler(async (request, response) => {
     throw new Error('Post could not be created')
   }
 
+  // Creating a corresponding like and comment schema for the post
+  const likes = await Like.create({
+    post: post._id,
+  })
+  const comments = await Comment.create({
+    post: post._id,
+  })
+
   // This includes required user details in every post
-  const postWithUserDetail = await Post.findById(post._id).populate(
-    'user',
-    'name username'
-  )
+  const postWithUserDetail = await Post.findByIdAndUpdate(
+    post._id,
+    { likes, comments },
+    { new: true, runValidators: true }
+  ).populate('user', 'name username')
 
   response.status(201).json(postWithUserDetail)
 })
@@ -41,10 +52,10 @@ const createPost = asyncHandler(async (request, response) => {
 // GET /api/posts/all
 // Private
 const getAllPosts = asyncHandler(async (_, response) => {
-  const postsWithUserDetail = await Post.find().populate(
-    'user',
-    'name username'
-  )
+  const postsWithUserDetail = await Post.find()
+    .populate('user', 'name username')
+    .populate('likes', 'like')
+    .populate('comments', 'comment')
   response.status(200).json(postsWithUserDetail)
 })
 
@@ -52,10 +63,10 @@ const getAllPosts = asyncHandler(async (_, response) => {
 // GET /api/posts/all/:id
 // Private
 const getPostById = asyncHandler(async (request, response) => {
-  const postWithUserDetail = await Post.findById(request.params.id).populate(
-    'user',
-    'name username'
-  )
+  const postWithUserDetail = await Post.findById(request.params.id)
+    .populate('user', 'name username')
+    .populate('likes', 'like')
+    .populate('comments', 'comment')
   response.status(200).json(postWithUserDetail)
 })
 
@@ -66,10 +77,10 @@ const getMyPosts = asyncHandler(async (request, response) => {
   // This comes from authorise middleware
   const user = request.user
 
-  const postsWithUserDetail = await Post.find({ user: user._id }).populate(
-    'user',
-    'name username'
-  )
+  const postsWithUserDetail = await Post.find({ user: user._id })
+    .populate('user', 'name username')
+    .populate('likes', 'like')
+    .populate('comments', 'comment')
   response.status(200).json(postsWithUserDetail)
 })
 
@@ -82,7 +93,10 @@ const getMyPost = asyncHandler(async (request, response) => {
   const postWithUserDetail = await Post.find({
     user: user._id,
     _id: request.params.id,
-  }).populate('user', 'name username')
+  })
+    .populate('user', 'name username')
+    .populate('likes', 'like')
+    .populate('comments', 'comment')
   response.status(200).json(postWithUserDetail)
 })
 
@@ -102,7 +116,10 @@ const updateMyPost = asyncHandler(async (request, response) => {
     },
     { title, category, description },
     { new: true, runValidators: true }
-  ).populate('user', 'name username')
+  )
+    .populate('user', 'name username')
+    .populate('likes', 'like')
+    .populate('comments', 'comment')
 
   // If the user is not updated
   if (!updatedPostWithUserDetail) {
@@ -114,7 +131,7 @@ const updateMyPost = asyncHandler(async (request, response) => {
 })
 
 // Delete my post by Id
-// GET /api/posts/me/:id
+// DELETE /api/posts/me/:id
 // Private
 const deleteMyPost = asyncHandler(async (request, response) => {
   // This comes from authorise middleware
@@ -122,6 +139,12 @@ const deleteMyPost = asyncHandler(async (request, response) => {
   const deleted = await Post.findOneAndDelete({
     user: user._id,
     _id: request.params.id,
+  })
+  await Like.findOneAndDelete({
+    post: request.params.id,
+  })
+  await Comment.findOneAndDelete({
+    post: request.params.id,
   })
 
   // If the object is not deleted, we get 'null'
