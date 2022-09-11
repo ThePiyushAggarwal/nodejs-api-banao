@@ -10,5 +10,3 @@ PASSWORD email password
 Postman Documentation: https://documenter.getpostman.com/view/19789580/Uz5CKxD6
 
 Deployed server: https://nodejs-api-banao.herokuapp.com/
-
-<strong>something</strong>
